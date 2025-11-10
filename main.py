@@ -8,8 +8,8 @@ from folium.plugins import FastMarkerCluster
 
 # ------------- CONFIG VIA ARGS -------------
 parser = argparse.ArgumentParser(description="Interactive network map from OpenFlights .dat files.")
-parser.add_argument("--airports", default="airports.csv", help="Path to airports.csv")
-parser.add_argument("--routes",   default="routes.csv",   help="Path to routes.csv")
+parser.add_argument("--airports", default="airports_cleaned.csv", help="Path to airports.csv")
+parser.add_argument("--routes",   default="routes_to_use.csv",   help="Path to routes.csv")
 parser.add_argument("--output",   default="airport_routes_map.html", help="Output HTML file")
 parser.add_argument("--max_routes", type=int, default=100000, help="Limit number of routes drawn (for performance)")
 parser.add_argument("--opacity", type=float, default=0.25, help="Route line opacity (0..1)")
@@ -103,7 +103,7 @@ def load_airports(path, use_ids=False):
 
 def load_routes(path, use_ids=False, max_routes=None, max_stops=1):
     """
-    Read routes.csv with headers:
+    Read routes_to_use.csv with headers:
     airline,airline_id,src_airport,src_id,dst_airport,dst_id,codeshare,stops,equipment
     Returns list of (src_key, dst_key) where key is ID or code per use_ids.
     Filters to routes with stops <= max_stops.

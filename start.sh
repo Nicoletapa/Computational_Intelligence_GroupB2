@@ -7,8 +7,8 @@ set -e  # Exit on error
 echo "Starting airport routes visualization..."
 
 python3 main.py \
- --airports airports.csv \
- --routes routes.csv \
+ --airports airports_cleaned.csv \
+ --routes routes_to_use.csv \
  --output airport_routes_map.html
 
 echo "✅ Visualization complete!"
