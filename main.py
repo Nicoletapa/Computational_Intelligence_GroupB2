@@ -8,8 +8,8 @@ from folium.plugins import FastMarkerCluster
 
 # ------------- CONFIG VIA ARGS -------------
 parser = argparse.ArgumentParser(description="Interactive network map from OpenFlights .dat files.")
-parser.add_argument("--airports", default="airports.dat", help="Path to airports.dat")
-parser.add_argument("--routes",   default="routes.dat",   help="Path to routes.dat")
+parser.add_argument("--airports", default="airports.csv", help="Path to airports.csv")
+parser.add_argument("--routes",   default="routes.csv",   help="Path to routes.csv")
 parser.add_argument("--output",   default="airport_routes_map.html", help="Output HTML file")
 parser.add_argument("--max_routes", type=int, default=100000, help="Limit number of routes drawn (for performance)")
 parser.add_argument("--opacity", type=float, default=0.25, help="Route line opacity (0..1)")
