@@ -6,8 +6,8 @@ This project was our final exam for the course Computational Intelligence fall 2
 
 Run the visualization with:
 
-```bash
-bash start.sh
+```bash with MAC OS 
+bash start.sh 
 ```
 
 Or manually:
