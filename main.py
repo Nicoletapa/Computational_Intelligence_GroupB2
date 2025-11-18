@@ -8,8 +8,8 @@ from folium.plugins import FastMarkerCluster
 
 # ------------- CONFIG VIA ARGS -------------
 parser = argparse.ArgumentParser(description="Interactive network map from OpenFlights .dat files.")
-parser.add_argument("--airports", default="airports_cleaned.csv", help="Path to airports.csv")
-parser.add_argument("--routes",   default="routes_to_use.csv",   help="Path to routes.csv")
+parser.add_argument("--airports", default="airports_cleaned.csv", help="Path to airports_cleaned.csv")
+parser.add_argument("--routes",   default="routes_cleaned.csv",   help="Path to routes_cleaned.csv")
 parser.add_argument("--output",   default="airport_routes_map.html", help="Output HTML file")
 parser.add_argument("--max_routes", type=int, default=100000, help="Limit number of routes drawn (for performance)")
 parser.add_argument("--opacity", type=float, default=0.25, help="Route line opacity (0..1)")
@@ -66,6 +66,8 @@ def load_airports(path, use_ids=False):
       - id (string) if use_ids=True
       - code (IATA prefer, else ICAO) if use_ids=False
     Value: (name, city, country, lat, lon)
+    
+    NOTE: Stores BOTH IATA and ICAO as keys to maximize route matching
     """
     airports = {}
     with open(path, newline="", encoding="utf-8") as f:
@@ -88,16 +90,18 @@ def load_airports(path, use_ids=False):
             except ValueError:
                 continue
 
+            info = (name, city, country, latf, lonf)
+
             if use_ids:
-                key = aid
+                if aid:
+                    airports[aid] = info
             else:
-                # prefer IATA; fall back to ICAO
-                key = iata or icao
+                # Store under BOTH IATA and ICAO codes to handle either in routes
+                if iata:
+                    airports[iata] = info
+                if icao:
+                    airports[icao] = info
 
-            if not key:
-                continue
-
-            airports[key] = (name, city, country, latf, lonf)
     return airports
 
 
@@ -174,9 +178,14 @@ def main():
     # Add route polylines (thin and semi-transparent for density)
     routes_layer = folium.FeatureGroup(name="Routes", show=True)
     missing = 0
+    missing_codes = set()
     for i, (src, dst) in enumerate(routes, 1):
         if src not in airports or dst not in airports:
             missing += 1
+            if src not in airports:
+                missing_codes.add(src)
+            if dst not in airports:
+                missing_codes.add(dst)
             continue
         _, _, _, lat1, lon1 = airports[src]
         _, _, _, lat2, lon2 = airports[dst]
@@ -200,7 +209,13 @@ def main():
 
     folium.LayerControl(collapsed=False).add_to(m)
     m.save(OUTPUT_HTML)
-    print(f"✅ Saved: {OUTPUT_HTML}  (routes drawn: {len(routes) - missing}, skipped: {missing})")
+    
+    print(f"✅ Saved: {OUTPUT_HTML}")
+    print(f"   Routes drawn: {len(routes) - missing}")
+    print(f"   Routes skipped: {missing}")
+    if missing_codes:
+        print(f"   Missing airport codes: {len(missing_codes)}")
+        print(f"   Sample missing codes: {list(missing_codes)[:10]}")
 
 if __name__ == "__main__":
     main()

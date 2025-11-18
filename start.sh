@@ -8,7 +8,7 @@ echo "Starting airport routes visualization..."
 
 python3 main.py \
  --airports airports_cleaned.csv \
- --routes routes_to_use.csv \
+ --routes routes_cleaned.csv \
  --output airport_routes_map.html
 
 echo "✅ Visualization complete!"
