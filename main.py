@@ -107,7 +107,7 @@ def load_airports(path, use_ids=False):
 
 def load_routes(path, use_ids=False, max_routes=None, max_stops=1):
     """
-    Read routes.csv with headers:
+    Read routes_to_use.csv with headers:
     airline,airline_id,src_airport,src_id,dst_airport,dst_id,codeshare,stops,equipment
     Returns list of (src_key, dst_key) where key is ID or code per use_ids.
     Filters to routes with stops <= max_stops.
