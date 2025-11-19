@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flight Network Disruption Simulator 3D</title>
-  <!-- Globe.gl Script -->
   <script src="//unpkg.com/globe.gl"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
@@ -13,14 +12,10 @@
     
     #container { display: flex; height: 100vh; position: relative; }
     
-    /* The 3D Canvas Container */
-    #globe-viz { 
-      flex: 1; 
-      height: 100%; 
-      background: #000011; /* Deep Space Blue/Black */
-    }
+    /* 3D Container */
+    #globe-viz { flex: 1; height: 100%; background: #040d21; } /* Dark Space Blue */
 
-    /* Sidebar Styles (Kept mostly same, adjusted for Dark Mode contrast) */
+    /* Sidebar (Kept identical) */
     #sidebar { width: 380px; background: #ffffff; color: #2c3e50; overflow-y: auto; z-index: 10; box-shadow: 4px 0 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
     #sidebar::-webkit-scrollbar { width: 8px; }
     #sidebar::-webkit-scrollbar-track { background: #f5f7fa; }
@@ -31,19 +26,16 @@
     .section { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
     .section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: #667eea; }
     
-    /* Controls */
     .control-group { margin-bottom: 16px; }
     .control-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; color: #4a5568; }
     .input-row { display: flex; gap: 8px; align-items: center; }
     input[type="number"], select { flex: 1; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
     
-    /* Buttons */
     .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
     .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; flex: 1; }
     .btn-secondary { background: #e2e8f0; color: #4a5568; flex: 1; }
     .button-row { display: flex; gap: 12px; }
 
-    /* Metrics */
     .metrics-box { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 8px; }
     .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
     .metric-card { background: #ffffff; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
@@ -51,7 +43,6 @@
     .metric-value { font-size: 20px; font-weight: 700; color: #667eea; }
     .metric-change.negative { color: #e53e3e; }
 
-    /* Legend & List */
     .community-legend { background: rgba(255, 255, 255, 0.95); padding: 12px; border-radius: 8px; font-size: 11px; border: 1px solid #e2e8f0; margin-top: 8px; }
     .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .legend-color-box { width: 16px; height: 16px; border-radius: 3px; }
@@ -61,7 +52,6 @@
     .airport-item:hover { background: #edf2f7; transform: translateX(4px); }
     .airport-item.disrupted { background: #fff5f5; border: 1px solid #fc8181; }
     .airport-code { font-weight: 700; font-size: 14px; min-width: 40px; }
-    .airport-details { flex: 1; font-size: 12px; }
     .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
     .status-badge.active { background: #c6f6d5; color: #22543d; }
     .status-badge.disrupted { background: #fed7d7; color: #742a2a; }
@@ -74,8 +64,8 @@
   <div id="container">
     <div id="sidebar">
       <div class="header">
-        <h1><i class="fas fa-globe"></i> Global Disruption</h1>
-        <p>3D Network Resilience Simulator</p>
+        <h1><i class="fas fa-globe-americas"></i> Network Disruption</h1>
+        <p>Global Resilience Simulator</p>
       </div>
 
       <div class="section">
@@ -119,31 +109,28 @@
   </div>
 
   <script>
-    // ========== CONFIG & CONSTANTS ==========
     const COLORS = {
       active: '#48bb78',
-      disrupted: '#ef4444',      // Bright Red
-      stranded: '#f97316',       // Bright Orange
+      disrupted: '#ef4444',
+      stranded: '#f97316',
       strandedAirport: '#fb923c'
     };
 
-    // Community Palette (Neon / Space Theme)
+    // Adjusted Palette for visibility against Blue Earth
     const PALETTE = [
-      '#00ff00', '#ff00ff', '#00ffff', '#ffff00', 
-      '#ff5555', '#5555ff', '#55ff55', '#ff55ff', 
-      '#ffa500', '#ffc0cb', '#e6e6fa', '#008080'
+      '#d90429', '#7209b7', '#3a0ca3', '#4361ee', 
+      '#f72585', '#007f5f', '#ffb703', '#fb8500', 
+      '#89c2d9', '#9b2226', '#6d6875', '#2b9348'
     ];
 
     function getGroupColor(groupId) {
-      if (groupId === -1) return '#ffffff'; // White for long haul
+      if (groupId === -1) return 'rgba(50,50,50, 0.3)'; // Grey/Transparent for bridges
       return PALETTE[groupId % PALETTE.length];
     }
 
-    // Load Initial Data
     const airportsGeo = {{ airports_json | safe }};
     const routesGeo = {{ routes_json | safe }};
-
-    // State
+    
     const disruptedSet = new Set();
     const strandedSet = new Set();
     let currentAirportsGeo = airportsGeo;
@@ -151,102 +138,85 @@
     let communityCount = 0;
     let countriesData = [];
 
-    // ========== 3D GLOBE INITIALIZATION ==========
+    // ========== OPTIMIZED GLOBE INITIALIZATION ==========
     const globe = Globe()
-      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg') // Night view
-      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png') // 3D Terrain
-      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png') // Stars
+      // 1. VISUALS: REALISTIC EARTH
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg') 
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+      .showAtmosphere(true) // Glow effect
+      .atmosphereColor('#3a228a')
+      .atmosphereAltitude(0.15)
+      
       .width(document.getElementById('globe-viz').clientWidth)
       .height(window.innerHeight)
-      // --- Points (Airports) ---
+      
+      // 2. POINTS (Airports)
       .pointLat('lat')
       .pointLng('lng')
       .pointColor('color')
       .pointAltitude('altitude')
       .pointRadius('radius')
-      .pointsMerge(true) // Performance optimization
-      .onPointClick(d => toggleAirport(d.code)) // Interaction
-      .pointLabel(d => `
-        <div style="background: rgba(0,0,0,0.8); color: white; padding: 8px; border-radius: 4px; border: 1px solid ${d.color}">
-          <b>${d.code}</b>: ${d.name}<br>
-          ${d.city}, ${d.country}<br>
-          ${d.status}
-        </div>
-      `)
-      // --- Arcs (Routes) ---
+      .pointsMerge(true) 
+      .onPointClick(d => toggleAirport(d.code))
+      .pointLabel(d => `<div style="background:rgba(0,0,0,0.8);color:white;padding:4px 8px;border-radius:4px;"><b>${d.code}</b>: ${d.city}</div>`)
+
+      // 3. ARCS (Routes)
       .arcStartLat('startLat')
       .arcStartLng('startLng')
       .arcEndLat('endLat')
       .arcEndLng('endLng')
       .arcColor('color')
-      .arcDashLength('dash')    // Dashes for disrupted
-      .arcDashGap('gap')        // Gaps for disrupted
-      .arcDashAnimateTime('animate') // Animation speed
-      .arcAltitude('arcAlt')    // Height of the flight path
-      .arcStroke('stroke')      // Thickness
-      // --- Polygons (Countries) ---
+      .arcDashLength('dash')
+      .arcDashGap('gap')
+      .arcDashAnimateTime('animate')
+      .arcAltitude('arcAlt')
+      .arcStroke('stroke') // Control thickness
+      
+      // 4. POLYGONS (Countries)
       .polygonSideColor(() => 'rgba(0,0,0,0)')
-      .polygonStrokeColor(() => '#111')
+      .polygonStrokeColor(() => 'rgba(255,255,255,0.1)')
       .polygonCapColor(d => d.color)
-      .polygonAltitude(0.01)
+      .polygonAltitude(0.008) // Very flat to avoid z-fighting
       .onPolygonClick(d => toggleCountry(d.properties.name))
-      .polygonLabel(d => `<div style="background:black; color:white; padding:4px;">${d.properties.name}</div>`)
+      .polygonLabel(d => `<div style="background:black;color:white;padding:4px;">${d.properties.name}</div>`)
+      
       (document.getElementById('globe-viz'));
 
-    // Auto-rotate slightly
-    globe.controls().autoRotate = true;
-    globe.controls().autoRotateSpeed = 0.5;
+    globe.controls().autoRotate = false;
+    globe.controls().autoRotateSpeed = 0.3;
+    globe.controls().enableZoom = true;
 
-    // Handle Window Resize
     window.addEventListener('resize', () => {
       globe.width(document.getElementById('globe-viz').clientWidth);
       globe.height(window.innerHeight);
     });
 
-    // ========== DATA CONVERSION (GeoJSON -> Globe Format) ==========
     function updateGlobeLayers() {
       
-      // 1. PROCESS AIRPORTS
+      // --- Points (Optimized) ---
       const pointsData = currentAirportsGeo.features.map(f => {
         const p = f.properties;
-        const g = f.geometry.coordinates;
-        const code = p.code;
-        
-        let state = 'active';
-        if (p.disrupted) state = 'disrupted';
-        else if (strandedSet.has(code)) state = 'stranded';
-
         let color = getGroupColor(p.group);
-        let radius = 0.2;
-        let altitude = 0.01;
+        let radius = 0.15; // Smaller
+        let alt = 0.01;
 
-        if (state === 'disrupted') {
+        if (p.disrupted) {
           color = COLORS.disrupted;
-          radius = 0.4;
-          altitude = 0.05; // Pop out disrupted airports
-        } else if (state === 'stranded') {
-          color = COLORS.strandedAirport;
           radius = 0.3;
+          alt = 0.05;
+        } else if (strandedSet.has(p.code)) {
+          color = COLORS.strandedAirport;
+          radius = 0.25;
         }
-
         return {
-          code: code,
-          name: p.name,
-          city: p.city,
-          country: p.country,
-          lat: g[1],
-          lng: g[0],
-          color: color,
-          radius: radius,
-          altitude: altitude,
-          status: state.toUpperCase(),
-          group: p.group
+          code: p.code, city: p.city, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
+          color: color, radius: radius, altitude: alt, group: p.group
         };
       });
 
-      // 2. PROCESS ROUTES
+      // --- Routes (Performance Fix Here) ---
       const arcsData = [];
-      // Cache coordinates for speed
       const coordsMap = {};
       pointsData.forEach(p => coordsMap[p.code] = { lat: p.lat, lng: p.lng });
 
@@ -254,7 +224,6 @@
         const p = f.properties;
         const src = coordsMap[p.src];
         const dst = coordsMap[p.dst];
-
         if (!src || !dst) return;
 
         const disrupted = p.disrupted;
@@ -264,67 +233,50 @@
         let color, stroke, dash, gap, animate, arcAlt;
 
         if (disrupted) {
-          // Disrupted: Red, flat against earth, dashed
-          color = [COLORS.disrupted, COLORS.disrupted]; // Gradient start/end
-          stroke = 0.5;
-          dash = 1;
-          gap = 2;
-          animate = 0; // Static
-          arcAlt = 0.02; // Very low
+          color = ['rgba(239, 68, 68, 0.8)', 'rgba(239, 68, 68, 0.8)'];
+          stroke = 0.15; // Thin
+          dash = 0.5;    // Small dashes
+          gap = 1;
+          animate = null; // NO ANIMATION (Performance)
+          arcAlt = 0.02;  // Flat
         } else if (isStranded) {
-          // Stranded: Orange, medium height
           color = [COLORS.stranded, COLORS.stranded];
-          stroke = 0.5;
-          dash = null;
-          gap = null;
-          animate = 2000; // Slow movement
+          stroke = 0.2;
+          dash = null; gap = null;
+          animate = 2000; // Animate ONLY stranded for visual pop
           arcAlt = 0.15;
         } else {
-          // Active: Community Color, High Arc, Animated
+          // Active Routes
           const c = getGroupColor(groupId);
-          color = [c, c];
+          // NOTE: We use 'null' for animate to make lines STATIC. 
+          // This saves huge CPU resources.
+          animate = null; 
+          stroke = 0.12; // Very Thin
+          dash = null; gap = null;
           
           if (groupId === -1) {
-            // Inter-continental: Higher and thinner
-            stroke = 0.3;
-            arcAlt = 0.4; 
-            animate = 1500;
-            // Make transparent using RGBA
-            color = [`rgba(255,255,255,0.3)`, `rgba(255,255,255,0.3)`]; 
+            // Bridges
+            color = ['rgba(50,50,50,0.1)', 'rgba(50,50,50,0.1)'];
+            arcAlt = 0.35;
           } else {
-            stroke = 0.5;
-            arcAlt = 0.2;
-            animate = 1000; // Fast
+            // Standard
+            color = [c, c];
+            arcAlt = 0.15;
           }
-          dash = null; 
-          gap = null; 
         }
 
         arcsData.push({
-          startLat: src.lat,
-          startLng: src.lng,
-          endLat: dst.lat,
-          endLng: dst.lng,
-          color: color,
-          stroke: stroke,
-          dash: dash,
-          gap: gap,
-          animate: animate,
-          arcAlt: arcAlt
+          startLat: src.lat, startLng: src.lng, endLat: dst.lat, endLng: dst.lng,
+          color: color, stroke: stroke, dash: dash, gap: gap, animate: animate, arcAlt: arcAlt
         });
       });
 
-      // 3. UPDATE GLOBE
       globe.pointsData(pointsData);
       globe.arcsData(arcsData);
-      
-      // Update Country Colors
       updateCountryColors();
     }
 
-    // ========== LOGIC & INTERACTIONS ==========
-    
-    // Mapping logic
+    // Logic (Same as before)
     const countryToAirports = {};
     airportsGeo.features.forEach(f => {
       const c = f.properties.country;
@@ -332,7 +284,6 @@
       countryToAirports[c].push(f.properties.code);
     });
 
-    // Load Country Borders
     fetch('//unpkg.com/world-atlas/countries-110m.json').then(res => res.json()).then(data => {
         countriesData = topojson.feature(data, data.objects.countries).features;
         globe.polygonsData(countriesData);
@@ -341,28 +292,18 @@
 
     function updateCountryColors() {
       if (!countriesData.length) return;
-      
       globe.polygonCapColor(d => {
-        const cName = d.properties.name;
-        let airports = countryToAirports[cName];
-        
-        // Fuzzy search for names (e.g. USA vs United States)
+        let airports = countryToAirports[d.properties.name];
         if (!airports) {
-           const key = Object.keys(countryToAirports).find(k => k.includes(cName) || cName.includes(k));
+           const key = Object.keys(countryToAirports).find(k => k.includes(d.properties.name) || d.properties.name.includes(k));
            if(key) airports = countryToAirports[key];
         }
-
-        if (!airports) return 'rgba(0,0,0,0)'; // Transparent if no airports
-
-        const disruptedCount = airports.filter(c => disruptedSet.has(c)).length;
-        const total = airports.length;
-
-        if (total > 0 && disruptedCount === total) return 'rgba(239, 68, 68, 0.6)'; // Red (Full disruption)
-        if (disruptedCount > 0) return 'rgba(249, 115, 22, 0.4)'; // Orange (Partial)
-        return 'rgba(255, 255, 255, 0.05)'; // Faint white (Active)
+        if (!airports) return 'rgba(0,0,0,0)';
+        const dc = airports.filter(c => disruptedSet.has(c)).length;
+        if (airports.length > 0 && dc === airports.length) return 'rgba(239, 68, 68, 0.5)'; // Red
+        if (dc > 0) return 'rgba(249, 115, 22, 0.4)'; // Orange
+        return 'rgba(0,0,0,0)'; // Transparent for active
       });
-      
-      globe.polygonStrokeColor(() => 'rgba(255,255,255,0.1)');
     }
 
     function toggleCountry(cName) {
@@ -372,27 +313,21 @@
            if(key) airports = countryToAirports[key];
         }
       if(!airports) return;
-
       const all = airports.every(c => disruptedSet.has(c));
       airports.forEach(c => all ? disruptedSet.delete(c) : disruptedSet.add(c));
-      
-      updateGlobeLayers();
-      renderAirportList();
+      updateGlobeLayers(); renderAirportList();
     }
 
     function toggleAirport(code) {
       if (disruptedSet.has(code)) disruptedSet.delete(code);
       else disruptedSet.add(code);
-      updateGlobeLayers();
-      renderAirportList();
+      updateGlobeLayers(); renderAirportList();
     }
 
-    // ========== BACKEND COMMUNICATION ==========
     const simulate = async () => {
       const autoN = parseInt(document.getElementById('auto_n').value) || 0;
       document.getElementById('loading').classList.add('active');
       document.getElementById('metrics').style.display = 'none';
-
       try {
         const res = await fetch('/analyze', {
           method: 'POST',
@@ -403,23 +338,14 @@
             centrality_metric: document.getElementById('centrality').value
           })
         });
-
         const data = await res.json();
-        
-        disruptedSet.clear();
-        strandedSet.clear();
+        disruptedSet.clear(); strandedSet.clear();
         data.disrupted_list.forEach(c => disruptedSet.add(c));
         if (data.stranded_list) data.stranded_list.forEach(c => strandedSet.add(c));
-
         currentAirportsGeo = data.airports_geo;
         currentRoutesGeo = data.routes_geo;
         communityCount = data.community_count || 0;
-
-        updateGlobeLayers();
-        updateMetrics(data);
-        updateLegend();
-        renderAirportList();
-
+        updateGlobeLayers(); updateMetrics(data); updateLegend(); renderAirportList();
       } catch (e) { console.error(e); } 
       finally {
         document.getElementById('loading').classList.remove('active');
@@ -430,7 +356,6 @@
     function updateMetrics(data) {
       const calc = (a, b) => b > 0 ? ((a - b) / b * 100).toFixed(1) + '%' : '0%';
       const { before, after } = data;
-      
       document.getElementById('metrics').innerHTML = `
         <div class="metrics-grid">
           <div class="metric-card"><div class="metric-label">Nodes</div><div class="metric-value">${after.nodes}</div><div class="metric-change negative">${calc(after.nodes, before.nodes)}</div></div>
@@ -442,41 +367,30 @@
 
     function renderAirportList() {
       const list = currentAirportsGeo.features.map(f => ({
-        code: f.properties.code,
-        name: f.properties.name,
-        country: f.properties.country,
-        disrupted: disruptedSet.has(f.properties.code),
-        group: f.properties.group
+        code: f.properties.code, name: f.properties.name, country: f.properties.country,
+        disrupted: disruptedSet.has(f.properties.code), group: f.properties.group
       })).sort((a,b) => a.disrupted === b.disrupted ? a.code.localeCompare(b.code) : (a.disrupted ? -1 : 1));
-
       document.getElementById('airport-list').innerHTML = list.map(ap => `
         <div class="airport-item ${ap.disrupted ? 'disrupted' : ''}" onclick="toggleAirport('${ap.code}')">
           <div class="airport-code" style="color:${ap.disrupted ? COLORS.disrupted : getGroupColor(ap.group)}">${ap.code}</div>
           <div class="airport-details"><b>${ap.name}</b><br>${ap.country}</div>
           <div class="status-badge ${ap.disrupted ? 'disrupted' : 'active'}">${ap.disrupted ? 'Down' : 'Ok'}</div>
-        </div>
-      `).join('');
+        </div>`).join('');
     }
 
     function updateLegend() {
       if (communityCount < 2) { document.getElementById('community-legend').style.display = 'none'; return; }
       let html = '';
-      for(let i=0; i<Math.min(communityCount, 12); i++) {
+      for(let i=0; i<Math.min(communityCount, 12); i++) 
         html += `<div class="legend-item"><div class="legend-color-box" style="background:${PALETTE[i]}"></div><span>Cluster ${i}</span></div>`;
-      }
       document.getElementById('legend-content').innerHTML = html;
       document.getElementById('community-legend').style.display = 'block';
     }
 
-    // Events
     document.getElementById('simulate').addEventListener('click', simulate);
     document.getElementById('reset').addEventListener('click', () => location.reload());
-
-    // Initial Load
-    updateGlobeLayers();
-    renderAirportList();
+    updateGlobeLayers(); renderAirportList();
   </script>
-  <!-- Helper for Topology conversion -->
   <script src="//unpkg.com/topojson-client"></script>
 </body>
 </html>
