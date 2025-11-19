@@ -15,3 +15,11 @@ Or manually:
 ```bash
 python3 main.py --airports airports.csv --routes routes.csv --output airport_routes_map.html
 ```
+
+
+To run visualization with disruptions:
+
+```bash
+python app.py
+```
+
