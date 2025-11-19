@@ -13,7 +13,7 @@ APP = Flask(__name__, static_folder="static", template_folder="templates")
 # ---------- CONFIG ----------
 AIRPORTS_CSV = "airports_cleaned.csv"
 ROUTES_CSV = "routes_cleaned.csv"
-MAX_ROUTES = None  # or an int to limit
+MAX_ROUTES = None  
 MAX_STOPS = 1
 
 # ---------- GEO HELPERS ----------
@@ -243,6 +243,7 @@ def build_geojson(airports, routes, disrupted_set):
         print(f"Warning: Community detection failed: {e}")
         print("Falling back to single group")
         group_map = {code: 0 for code in airports.keys()}
+        communities = [set(airports.keys())]
     
     # --- Build Airport Features ---
     airport_features = []
@@ -266,7 +267,7 @@ def build_geojson(airports, routes, disrupted_set):
         }
         airport_features.append(f)
     
-    # --- Build Route Features ---
+    # --- Build Route Features (WITH CURVES) ---
     route_features = []
     for src, dst in routes:
         if src not in airports or dst not in airports:
@@ -276,12 +277,28 @@ def build_geojson(airports, routes, disrupted_set):
         info_d = airports[dst]
         disrupted = (src in disrupted_set) or (dst in disrupted_set)
         
+        # NEW: Check if route connects to stranded airports
+        # We need to pass the stranded list to this function
+        # For now, we'll compute it here (or pass it as parameter)
+        
+        # --- VISUAL FIX: CURVES VS STRAIGHT ---
+        if disrupted:
+            # Disrupted routes stay straight (Visual "Ghost" link)
+            coords = [[info_s["lon"], info_s["lat"]], [info_d["lon"], info_d["lat"]]]
+        else:
+            # Active routes get Curved (Great Circle)
+            pts = gc_intermediate_points(
+                info_s["lon"], info_s["lat"], 
+                info_d["lon"], info_d["lat"], 
+                steps=20
+            )
+            coords = [[p[1], p[0]] for p in pts]
+        # ---------------------------------------
+        
         # Determine route group
-        # If src and dst are in same community, use that color
-        # If different, mark as inter-community connection (-1)
         src_group = group_map.get(src, 0)
         dst_group = group_map.get(dst, 0)
-        route_group = src_group if src_group == dst_group else -1  # -1 = bridge
+        route_group = src_group if src_group == dst_group else -1
         
         route_features.append({
             "type": "Feature",
@@ -289,11 +306,11 @@ def build_geojson(airports, routes, disrupted_set):
                 "src": src,
                 "dst": dst,
                 "disrupted": disrupted,
-                "group": route_group  # Community ID or -1 for bridges
+                "group": route_group
             },
             "geometry": {
                 "type": "LineString",
-                "coordinates": [[info_s["lon"], info_s["lat"]], [info_d["lon"], info_d["lat"]]]
+                "coordinates": coords
             }
         })
     
@@ -306,7 +323,7 @@ def build_geojson(airports, routes, disrupted_set):
             "type": "FeatureCollection",
             "features": route_features
         },
-        "community_count": len(communities) if 'communities' in locals() else 1
+        "community_count": len(communities)
     }
 
 # ---------- STARTUP: Load data once ----------

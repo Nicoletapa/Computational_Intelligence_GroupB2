@@ -589,9 +589,9 @@
     // 2. Constants
     const COLORS = {
       active: '#48bb78',
-      disrupted: '#f56565',
-      stranded: '#ed8936',
-      route: '#4299e1'
+      disrupted: '#e53e3e',      // Red for disrupted
+      stranded: '#f6ad55',       // Light Orange for stranded routes
+      strandedAirport: '#ed8936' // Darker Orange for stranded airports
     };
 
     const MARKER_OPTIONS = {
@@ -602,7 +602,7 @@
     // NEW: Community Color Palette (12 distinct colors)
     const PALETTE = [
       '#3cb44b', // Green
-      '#e6194B', // Red
+      '#ffd700', // Yellow
       '#4363d8', // Blue
       '#f58231', // Orange
       '#911eb4', // Purple
@@ -685,24 +685,16 @@
       if (feature.properties.disrupted) state = 'd';
       else if (strandedSet.has(code)) state = 's';
 
-      const key = code + '-' + state + '-' + groupId;
-      
-      // Don't use cache for dynamic sizing - we need fresh markers
-      // if (markerCache.has(key)) {
-      //   return markerCache.get(key);
-      // }
-
       // Use community color for active airports
       let color = getGroupColor(groupId);
-      if (state === 'd') color = COLORS.disrupted;
-      if (state === 's') color = COLORS.stranded;
+      if (state === 'd') color = COLORS.disrupted;           // Red
+      if (state === 's') color = COLORS.strandedAirport;     // Darker Orange (#ed8936)
 
       const options = (state === 'd') ? MARKER_OPTIONS.disrupted : MARKER_OPTIONS.active;
       
-      // Calculate initial radius based on current zoom
       const zoom = map.getZoom();
       const baseRadius = Math.max(1, zoom / 2);
-      const initialRadius = state === 'd' ? baseRadius + 2 : baseRadius; // Disrupted slightly bigger
+      const initialRadius = state === 'd' ? baseRadius + 2 : baseRadius;
       
       const marker = L.circleMarker(
         [feature.geometry.coordinates[1], feature.geometry.coordinates[0]], 
@@ -710,7 +702,7 @@
           ...options, 
           color, 
           fillColor: color,
-          radius: initialRadius // Dynamic radius
+          radius: initialRadius
         }
       );
       
@@ -727,8 +719,6 @@
       
       marker.on('click', () => toggleAirport(feature.properties.code));
       
-      // Don't cache when using dynamic sizing
-      // markerCache.set(key, marker);
       return marker;
     }
 
@@ -771,38 +761,47 @@
         activeMarkers.forEach(m => activeAirportsLayer.addLayer(m));
         disruptedMarkers.forEach(m => disruptedAirportsLayer.addLayer(m));
 
-        // --- ROUTES (Updated with Dynamic Weights) ---
+        // --- ROUTES (Updated with Color-Based Styling) ---
         currentRoutesGeo.features.forEach(feature => {
           const disrupted = feature.properties.disrupted;
           const groupId = feature.properties.group;
+          
+          // Check if route connects to stranded airports
+          const isStranded = strandedSet.has(feature.properties.src) || 
+                             strandedSet.has(feature.properties.dst);
           
           // Determine Style
           let routeColor, routeWeight, routeOpacity;
 
           if (disrupted) {
+            // DISRUPTED: Bright Red, Solid, Thick
             routeColor = COLORS.disrupted;
-            routeWeight = baseWeight * 1.5; // Disrupted routes slightly thicker
-            routeOpacity = 0.6;
+            routeWeight = baseWeight * 1.5;
+            routeOpacity = 0.8; // High opacity, no dashes needed
+          } else if (isStranded) {
+            // STRANDED: Light Orange, Solid, Medium Thick
+            routeColor = COLORS.stranded; // #f6ad55
+            routeWeight = baseWeight * 1.3;
+            routeOpacity = 0.7; // High opacity, distinct color
           } else {
-            // Use the Community Color
+            // ACTIVE: Use Community Colors
             routeColor = getGroupColor(groupId);
             
-            // DYNAMIC WEIGHT based on zoom and group type
             if (groupId === -1) {
-              routeWeight = baseWeight * 0.6; // Thinner for inter-continental
+              routeWeight = baseWeight * 0.6;
               routeOpacity = 0.3;
             } else {
-              routeWeight = baseWeight; // Standard dynamic weight
-              routeOpacity = 0.15; // Low opacity creates "glowing" effect when stacked
+              routeWeight = baseWeight;
+              routeOpacity = 0.15;
             }
           }
 
           const layer = L.geoJSON(feature, {
             style: {
               color: routeColor,
-              weight: routeWeight,
+              weight: routeWeight, 
               opacity: routeOpacity,
-              dashArray: disrupted ? '5,5' : null
+              dashArray: null // NO DASHES - using colors only
             }
           });
           
@@ -1162,35 +1161,46 @@
     function updateVisualSizes() {
       const zoom = map.getZoom();
       
-      // Calculate dynamic sizes
-      // At Zoom 2 (World view): tiny lines (0.3px) and dots (1px)
-      // At Zoom 10 (Close up): thick lines (2px) and dots (5px)
       const baseWeight = Math.max(0.3, zoom / 5);
       const baseRadius = Math.max(1, zoom / 2);
 
       // 1. Update Routes (Lines)
       activeRoutesLayer.eachLayer(layer => {
         layer.eachLayer(subLayer => {
-          // Preserve community-based weight modifiers
           const props = subLayer.feature.properties;
           const groupId = props.group;
           
-          let newWeight;
+          const isStranded = strandedSet.has(props.src) || strandedSet.has(props.dst);
+          
+          let newWeight, newOpacity;
           if (props.disrupted) {
             newWeight = baseWeight * 1.5;
+            newOpacity = 0.8;
+          } else if (isStranded) {
+            newWeight = baseWeight * 1.3;
+            newOpacity = 0.7;
           } else if (groupId === -1) {
             newWeight = baseWeight * 0.6;
+            newOpacity = 0.3;
           } else {
             newWeight = baseWeight;
+            newOpacity = 0.15;
           }
           
-          subLayer.setStyle({ weight: newWeight });
+          subLayer.setStyle({ 
+            weight: newWeight,
+            opacity: newOpacity
+            // NO dashArray change - colors remain stable
+          });
         });
       });
       
       disruptedRoutesLayer.eachLayer(layer => {
         layer.eachLayer(subLayer => {
-          subLayer.setStyle({ weight: baseWeight * 1.5 });
+          subLayer.setStyle({ 
+            weight: baseWeight * 1.5,
+            opacity: 0.8
+          });
         });
       });
 
@@ -1200,7 +1210,7 @@
       });
       
       disruptedAirportsLayer.eachLayer(marker => {
-        marker.setRadius(baseRadius + 2); // Keep disrupted slightly bigger
+        marker.setRadius(baseRadius + 2);
       });
     }
 
