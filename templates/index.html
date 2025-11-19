@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flight Network Disruption Simulator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      background: #f5f7fa;
+    }
+
+    #container {
+      display: flex;
+      height: 100vh;
+      position: relative;
+    }
+
+    #map {
+      flex: 1;
+      height: 100%;
+      box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+    }
+
+    #sidebar {
+      width: 380px;
+      background: #ffffff;
+      color: #2c3e50;
+      overflow-y: auto;
+      box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #sidebar::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #sidebar::-webkit-scrollbar-track {
+      background: #f5f7fa;
+    }
+
+    #sidebar::-webkit-scrollbar-thumb {
+      background: #cbd5e0;
+      border-radius: 4px;
+    }
+
+    #sidebar::-webkit-scrollbar-thumb:hover {
+      background: #a0aec0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.95;
+      line-height: 1.5;
+    }
+
+    .section {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #667eea;
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #4a5568;
+    }
+
+    .country-label {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #667eea;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      color: #2c3e50;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="number"], select {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #2c3e50;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    input[type="number"]:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #f7fafc;
+    }
+
+    select option {
+      background: #ffffff;
+      color: #2c3e50;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+      flex: 1;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e0;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .metrics-box {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 8px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .metric-card {
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .metric-change {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .metric-change.negative {
+      color: #e53e3e;
+    }
+
+    .metric-change.positive {
+      color: #38a169;
+    }
+
+    #airport-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .airport-item {
+      padding: 12px;
+      margin-bottom: 6px;
+      background: #f7fafc;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .airport-item:hover {
+      background: #edf2f7;
+      transform: translateX(4px);
+      border-color: #cbd5e0;
+    }
+
+    .airport-item.disrupted {
+      background: #fff5f5;
+      border-color: #fc8181;
+    }
+
+    .airport-code {
+      font-weight: 700;
+      font-size: 14px;
+      min-width: 40px;
+      color: #667eea;
+    }
+
+    .airport-item.disrupted .airport-code {
+      color: #e53e3e;
+    }
+
+    .airport-details {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .airport-name {
+      font-weight: 600;
+      margin-bottom: 2px;
+      color: #2d3748;
+    }
+
+    .airport-location {
+      color: #718096;
+      font-size: 11px;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-badge.active {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .status-badge.disrupted {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .toggle-switches {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .toggle-item {
+      background: #f7fafc;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid #e2e8f0;
+    }
+
+    .toggle-item:hover {
+      background: #edf2f7;
+      border-color: #cbd5e0;
+    }
+
+    .toggle-item.active {
+      border-color: #667eea;
+      background: #ebf4ff;
+    }
+
+    .toggle-label {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #4a5568;
+    }
+
+    .toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: #cbd5e0;
+      border-radius: 12px;
+      position: relative;
+      transition: background 0.3s ease;
+    }
+
+    .toggle-item.active .toggle-switch {
+      background: #667eea;
+    }
+
+    .toggle-knob {
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .toggle-item.active .toggle-knob {
+      transform: translateX(20px);
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #ffffff;
+      color: #2c3e50;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .leaflet-popup-content {
+      margin: 12px;
+      font-size: 13px;
+    }
+
+    .leaflet-popup-tip {
+      background: #ffffff;
+    }
+
+    .community-legend {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      border: 1px solid #e2e8f0;
+      margin-top: 8px;
+    }
+
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .legend-color-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="sidebar">
+      <div class="header">
+        <h1><i class="fas fa-plane-departure"></i> Network Disruption</h1>
+        <p>Simulate airport disruptions and analyze network resilience</p>
+      </div>
+
+      <div class="section">
+        <h3><i class="fas fa-eye"></i> Layer Visibility</h3>
+        <div class="toggle-switches">
+          <div class="toggle-item active" id="toggle-active-airports">
+            <div class="toggle-label">
+              <i class="fas fa-circle" style="color: #48bb78;"></i>
+              Active
+            </div>
+            <div class="toggle-switch">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="toggle-item active" id="toggle-disrupted-airports">
+            <div class="toggle-label">
+              <i class="fas fa-circle" style="color: #f56565;"></i>
+              Disrupted
+            </div>
+            <div class="toggle-switch">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="toggle-item active" id="toggle-active-routes">
+            <div class="toggle-label">
+              <i class="fas fa-route" style="color: #4299e1;"></i>
+              Routes (Active)
+            </div>
+            <div class="toggle-switch">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="toggle-item active" id="toggle-disrupted-routes">
+            <div class="toggle-label">
+              <i class="fas fa-route" style="color: #f56565;"></i>
+              Routes (Down)
+            </div>
+            <div class="toggle-switch">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="toggle-item" id="toggle-countries">
+            <div class="toggle-label">
+              <i class="fas fa-globe-americas" style="color: #718096;"></i>
+              Country Borders
+            </div>
+            <div class="toggle-switch">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3><i class="fas fa-sliders-h"></i> Controls</h3>
+        
+        <div class="control-group">
+          <label>Auto-disrupt top airports</label>
+          <div class="input-row">
+            <input id="auto_n" type="number" value="0" min="0" max="50" placeholder="0">
+            <select id="centrality">
+              <option value="betweenness">Betweenness</option>
+              <option value="degree">Degree</option>
+              <option value="closeness">Closeness</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="simulate" class="btn btn-primary">
+            <i class="fas fa-play"></i> Simulate
+          </button>
+          <button id="reset" class="btn btn-secondary">
+            <i class="fas fa-redo"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3><i class="fas fa-chart-line"></i> Network Metrics</h3>
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <div>Analyzing network...</div>
+        </div>
+        <div class="metrics-box" id="metrics">
+          <div style="text-align: center; color: #718096; padding: 20px;">
+            Click <strong>Simulate</strong> to analyze network impact
+          </div>
+        </div>
+        
+        <div class="community-legend" id="community-legend" style="display: none;">
+          <div class="legend-title">📊 Network Communities</div>
+          <div id="legend-content"></div>
+        </div>
+      </div>
+
+      <div class="section" style="flex: 1;">
+        <h3><i class="fas fa-list"></i> Airports</h3>
+        <div id="airport-list"></div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ========== PERFORMANCE OPTIMIZATIONS ==========
+    
+    // 1. Cache DOM elements
+    const elements = {
+      loading: document.getElementById('loading'),
+      metrics: document.getElementById('metrics'),
+      airportList: document.getElementById('airport-list'),
+      autoN: document.getElementById('auto_n'),
+      centrality: document.getElementById('centrality'),
+      communityLegend: document.getElementById('community-legend'),
+      legendContent: document.getElementById('legend-content')
+    };
+
+    // 2. Constants
+    const COLORS = {
+      active: '#48bb78',
+      disrupted: '#f56565',
+      stranded: '#ed8936',
+      route: '#4299e1'
+    };
+
+    const MARKER_OPTIONS = {
+      active: { fillOpacity: 0.8, weight: 1 },     // Removed fixed 'radius'
+      disrupted: { fillOpacity: 0.8, weight: 1 }   // Removed fixed 'radius'
+    };
+
+    // NEW: Community Color Palette (12 distinct colors)
+    const PALETTE = [
+      '#3cb44b', // Green
+      '#e6194B', // Red
+      '#4363d8', // Blue
+      '#f58231', // Orange
+      '#911eb4', // Purple
+      '#42d4f4', // Cyan
+      '#f032e6', // Magenta
+      '#bfef45', // Lime
+      '#fabed4', // Pink
+      '#469990', // Teal
+      '#dcbeff', // Lavender
+      '#9A6324'  // Brown
+    ];
+
+    const INTER_CONTINENTAL_COLOR = '#a0aec0'; // Grey for bridges between clusters
+
+    // Helper to get color by group ID
+    function getGroupColor(groupId) {
+      if (groupId === -1) return INTER_CONTINENTAL_COLOR;
+      return PALETTE[groupId % PALETTE.length];
+    }
+
+    // Parse initial data once
+    const airportsGeo = {{ airports_json | safe }};
+    const routesGeo = {{ routes_json | safe }};
+
+    // NEW: Country State Management
+    let countryLayer = null;
+    let countryData = null;
+    const countryToAirports = {};
+    let communityCount = 0;
+
+    // Initialize map
+    const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 10,
+      minZoom: 2
+    }).addTo(map);
+
+    // Layer visibility state
+    const layerVisibility = {
+      activeAirports: true,
+      disruptedAirports: true,
+      activeRoutes: true,
+      disruptedRoutes: true
+    };
+
+    // Layers
+    let activeAirportsLayer = L.layerGroup().addTo(map);
+    let disruptedAirportsLayer = L.layerGroup().addTo(map);
+    let activeRoutesLayer = L.layerGroup().addTo(map);
+    let disruptedRoutesLayer = L.layerGroup().addTo(map);
+
+    // State
+    const disruptedSet = new Set();
+    const strandedSet = new Set();
+    let currentAirportsGeo = airportsGeo;
+    let currentRoutesGeo = routesGeo;
+
+    // NEW: Pre-process Airport Data to map Countries
+    airportsGeo.features.forEach(f => {
+      const country = f.properties.country;
+      const code = f.properties.code;
+      
+      if (!countryToAirports[country]) {
+        countryToAirports[country] = [];
+      }
+      countryToAirports[country].push(code);
+    });
+
+    console.log('Countries with airports:', Object.keys(countryToAirports).length);
+
+    // Memoize marker creation
+    const markerCache = new Map();
+    
+    function createMarker(feature) {
+      const code = feature.properties.code;
+      const groupId = feature.properties.group;
+      let state = 'a';
+      if (feature.properties.disrupted) state = 'd';
+      else if (strandedSet.has(code)) state = 's';
+
+      const key = code + '-' + state + '-' + groupId;
+      
+      // Don't use cache for dynamic sizing - we need fresh markers
+      // if (markerCache.has(key)) {
+      //   return markerCache.get(key);
+      // }
+
+      // Use community color for active airports
+      let color = getGroupColor(groupId);
+      if (state === 'd') color = COLORS.disrupted;
+      if (state === 's') color = COLORS.stranded;
+
+      const options = (state === 'd') ? MARKER_OPTIONS.disrupted : MARKER_OPTIONS.active;
+      
+      // Calculate initial radius based on current zoom
+      const zoom = map.getZoom();
+      const baseRadius = Math.max(1, zoom / 2);
+      const initialRadius = state === 'd' ? baseRadius + 2 : baseRadius; // Disrupted slightly bigger
+      
+      const marker = L.circleMarker(
+        [feature.geometry.coordinates[1], feature.geometry.coordinates[0]], 
+        { 
+          ...options, 
+          color, 
+          fillColor: color,
+          radius: initialRadius // Dynamic radius
+        }
+      );
+      
+      let statusText = "";
+      if(state === 's') statusText = '<br><strong style="color: #ed8936">⚠ ISOLATED FROM NETWORK</strong>';
+
+      marker.bindPopup(`
+        <strong style="color: ${getGroupColor(groupId)}; font-size: 15px;">${feature.properties.code}</strong><br>
+        <strong>${feature.properties.name}</strong><br>
+        ${feature.properties.city}, ${feature.properties.country}<br>
+        <small style="color: #718096;">Community ${groupId >= 0 ? groupId : 'Bridge'}</small>
+        ${statusText}
+      `);
+      
+      marker.on('click', () => toggleAirport(feature.properties.code));
+      
+      // Don't cache when using dynamic sizing
+      // markerCache.set(key, marker);
+      return marker;
+    }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    function updateMapLayers() {
+      requestAnimationFrame(() => {
+        activeAirportsLayer.clearLayers();
+        disruptedAirportsLayer.clearLayers();
+        activeRoutesLayer.clearLayers();
+        disruptedRoutesLayer.clearLayers();
+
+        const zoom = map.getZoom();
+        const baseWeight = Math.max(0.3, zoom / 5);
+
+        // --- AIRPORTS ---
+        const activeMarkers = [];
+        const disruptedMarkers = [];
+
+        currentAirportsGeo.features.forEach(feature => {
+          const marker = createMarker(feature);
+          
+          if (feature.properties.disrupted) {
+            disruptedMarkers.push(marker);
+          } else {
+            activeMarkers.push(marker);
+          }
+        });
+
+        activeMarkers.forEach(m => activeAirportsLayer.addLayer(m));
+        disruptedMarkers.forEach(m => disruptedAirportsLayer.addLayer(m));
+
+        // --- ROUTES (Updated with Dynamic Weights) ---
+        currentRoutesGeo.features.forEach(feature => {
+          const disrupted = feature.properties.disrupted;
+          const groupId = feature.properties.group;
+          
+          // Determine Style
+          let routeColor, routeWeight, routeOpacity;
+
+          if (disrupted) {
+            routeColor = COLORS.disrupted;
+            routeWeight = baseWeight * 1.5; // Disrupted routes slightly thicker
+            routeOpacity = 0.6;
+          } else {
+            // Use the Community Color
+            routeColor = getGroupColor(groupId);
+            
+            // DYNAMIC WEIGHT based on zoom and group type
+            if (groupId === -1) {
+              routeWeight = baseWeight * 0.6; // Thinner for inter-continental
+              routeOpacity = 0.3;
+            } else {
+              routeWeight = baseWeight; // Standard dynamic weight
+              routeOpacity = 0.15; // Low opacity creates "glowing" effect when stacked
+            }
+          }
+
+          const layer = L.geoJSON(feature, {
+            style: {
+              color: routeColor,
+              weight: routeWeight,
+              opacity: routeOpacity,
+              dashArray: disrupted ? '5,5' : null
+            }
+          });
+          
+          layer.bindTooltip(`${feature.properties.src} → ${feature.properties.dst}`, {
+            permanent: false,
+            direction: 'center'
+          });
+
+          if (disrupted) {
+            disruptedRoutesLayer.addLayer(layer);
+          } else {
+            activeRoutesLayer.addLayer(layer);
+          }
+        });
+      });
+    }
+
+    const toggleLayer = (() => {
+      const layerMap = {
+        'active-airports': { layer: activeAirportsLayer, key: 'activeAirports' },
+        'disrupted-airports': { layer: disruptedAirportsLayer, key: 'disruptedAirports' },
+        'active-routes': { layer: activeRoutesLayer, key: 'activeRoutes' },
+        'disrupted-routes': { layer: disruptedRoutesLayer, key: 'disruptedRoutes' }
+      };
+
+      return function(layerName) {
+        const toggle = document.getElementById(`toggle-${layerName}`);
+        toggle.classList.toggle('active');
+        
+        const { layer, key } = layerMap[layerName];
+        layerVisibility[key] = !layerVisibility[key];
+        
+        if (layerVisibility[key]) {
+          map.addLayer(layer);
+        } else {
+          map.removeLayer(layer);
+        }
+      };
+    })();
+
+    ['active-airports', 'disrupted-airports', 'active-routes', 'disrupted-routes'].forEach(layerName => {
+      document.getElementById(`toggle-${layerName}`).addEventListener('click', () => toggleLayer(layerName));
+    });
+
+    function updateCommunityLegend() {
+      if (communityCount <= 1) {
+        elements.communityLegend.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      for (let i = 0; i < Math.min(communityCount, 12); i++) {
+        const color = PALETTE[i % PALETTE.length];
+        html += `
+          <div class="legend-item">
+            <div class="legend-color-box" style="background: ${color};"></div>
+            <span>Community ${i}</span>
+          </div>
+        `;
+      }
+      
+      html += `
+        <div class="legend-item">
+          <div class="legend-color-box" style="background: ${INTER_CONTINENTAL_COLOR};"></div>
+          <span>Inter-community</span>
+        </div>
+      `;
+
+      elements.legendContent.innerHTML = html;
+      elements.communityLegend.style.display = 'block';
+    }
+
+    function renderAirportList() {
+      const airports = currentAirportsGeo.features
+        .map(f => ({
+          code: f.properties.code,
+          name: f.properties.name,
+          city: f.properties.city,
+          country: f.properties.country,
+          disrupted: disruptedSet.has(f.properties.code),
+          group: f.properties.group
+        }))
+        .sort((a, b) => {
+          if (a.disrupted !== b.disrupted) return a.disrupted ? -1 : 1;
+          return a.code.localeCompare(b.code);
+        });
+
+      const fragment = document.createDocumentFragment();
+      const tempDiv = document.createElement('div');
+      
+      tempDiv.innerHTML = airports.map(ap => {
+        const groupColor = getGroupColor(ap.group);
+        return `
+          <div class="airport-item ${ap.disrupted ? 'disrupted' : ''}" data-code="${ap.code}">
+            <div class="airport-code" style="color: ${ap.disrupted ? '#e53e3e' : groupColor};">${ap.code}</div>
+            <div class="airport-details">
+              <div class="airport-name">${ap.name}</div>
+              <div class="airport-location">${ap.city}, ${ap.country}</div>
+            </div>
+            <div class="status-badge ${ap.disrupted ? 'disrupted' : 'active'}">
+              ${ap.disrupted ? 'Disrupted' : 'Active'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      while (tempDiv.firstChild) {
+        fragment.appendChild(tempDiv.firstChild);
+      }
+
+      elements.airportList.innerHTML = '';
+      elements.airportList.appendChild(fragment);
+
+      elements.airportList.addEventListener('click', (e) => {
+        const item = e.target.closest('.airport-item');
+        if (item) {
+          toggleAirport(item.dataset.code);
+        }
+      });
+    }
+
+    function toggleAirport(code) {
+      if (disruptedSet.has(code)) {
+        disruptedSet.delete(code);
+      } else {
+        disruptedSet.add(code);
+      }
+      renderAirportList();
+      updateCountryLayerStyle();
+    }
+
+    // NEW: Country Functions
+    function toggleCountry(countryName) {
+      let airportsInCountry = countryToAirports[countryName];
+      
+      if (!airportsInCountry || airportsInCountry.length === 0) {
+        const fuzzyMatch = Object.keys(countryToAirports).find(k => 
+          k.toLowerCase().includes(countryName.toLowerCase()) || 
+          countryName.toLowerCase().includes(k.toLowerCase())
+        );
+        
+        if (fuzzyMatch) {
+          airportsInCountry = countryToAirports[fuzzyMatch];
+        } else {
+          console.log(`No airports found for country: ${countryName}`);
+          return;
+        }
+      }
+
+      const allDisrupted = airportsInCountry.every(code => disruptedSet.has(code));
+
+      if (allDisrupted) {
+        airportsInCountry.forEach(code => disruptedSet.delete(code));
+      } else {
+        airportsInCountry.forEach(code => disruptedSet.add(code));
+      }
+
+      updateMapLayers();
+      renderAirportList();
+      updateCountryLayerStyle();
+    }
+
+    async function loadCountryBorders() {
+      try {
+        console.log('Loading country borders...');
+        const response = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
+        countryData = await response.json();
+        console.log('Country data loaded:', countryData.features.length, 'countries');
+
+        countryLayer = L.geoJSON(countryData, {
+          style: styleCountry,
+          onEachFeature: onEachCountry
+        });
+
+        document.getElementById('toggle-countries').addEventListener('click', (e) => {
+          const toggle = e.currentTarget;
+          toggle.classList.toggle('active');
+          
+          if (map.hasLayer(countryLayer)) {
+            map.removeLayer(countryLayer);
+          } else {
+            countryLayer.addTo(map);
+            countryLayer.bringToBack();
+          }
+        });
+
+        console.log('Country borders ready!');
+      } catch (error) {
+        console.error("Failed to load country borders:", error);
+      }
+    }
+
+    function styleCountry(feature) {
+      const cName = feature.properties.name;
+      let airports = countryToAirports[cName] || [];
+      
+      if (airports.length === 0) {
+        const fuzzyKey = Object.keys(countryToAirports).find(k => 
+          k.toLowerCase().includes(cName.toLowerCase()) || 
+          cName.toLowerCase().includes(k.toLowerCase())
+        );
+        if (fuzzyKey) {
+          airports = countryToAirports[fuzzyKey];
+        }
+      }
+
+      const hasAirports = airports.length > 0;
+      const disruptedCount = airports.filter(code => disruptedSet.has(code)).length;
+      const isFullyDisrupted = hasAirports && disruptedCount === airports.length;
+      const isPartiallyDisrupted = hasAirports && disruptedCount > 0 && !isFullyDisrupted;
+
+      let fillColor = '#a0aec0';
+      let fillOpacity = 0.1;
+
+      if (isFullyDisrupted) {
+        fillColor = '#e53e3e';
+        fillOpacity = 0.4;
+      } else if (isPartiallyDisrupted) {
+        fillColor = '#ed8936';
+        fillOpacity = 0.3;
+      }
+
+      return {
+        fillColor: fillColor,
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: fillOpacity
+      };
+    }
+
+    function updateCountryLayerStyle() {
+      if (countryLayer) {
+        countryLayer.setStyle(styleCountry);
+      }
+    }
+
+    function onEachCountry(feature, layer) {
+      layer.on({
+        mouseover: (e) => {
+          const layer = e.target;
+          layer.setStyle({
+            weight: 2,
+            color: '#667eea',
+            dashArray: '',
+            fillOpacity: 0.5
+          });
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToFront();
+          }
+          
+          layer.bindTooltip(feature.properties.name, {
+            permanent: false, 
+            direction: "center",
+            className: "country-label"
+          }).openTooltip();
+        },
+        mouseout: (e) => {
+          countryLayer.resetStyle(e.target);
+          e.target.closeTooltip();
+        },
+        click: (e) => {
+          L.DomEvent.stopPropagation(e);
+          toggleCountry(feature.properties.name);
+        }
+      });
+    }
+
+    const simulate = debounce(async function() {
+      const autoN = parseInt(elements.autoN.value) || 0;
+      const metric = elements.centrality.value;
+
+      elements.loading.classList.add('active');
+      elements.metrics.style.display = 'none';
+
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            disrupted: Array.from(disruptedSet),
+            auto_top_n: autoN,
+            centrality_metric: metric
+          })
+        });
+
+        const data = await response.json();
+        
+        disruptedSet.clear();
+        strandedSet.clear();
+        data.disrupted_list.forEach(code => disruptedSet.add(code));
+        if (data.stranded_list) {
+          data.stranded_list.forEach(code => strandedSet.add(code));
+        }
+
+        currentAirportsGeo = data.airports_geo;
+        currentRoutesGeo = data.routes_geo;
+        communityCount = data.community_count || 0;
+
+        updateMapLayers();
+        updateCountryLayerStyle();
+        updateCommunityLegend();
+
+        const before = data.before;
+        const after = data.after;
+        const nodeChange = ((after.nodes - before.nodes) / before.nodes * 100).toFixed(1);
+        const edgeChange = ((after.edges - before.edges) / before.edges * 100).toFixed(1);
+        const lccChange = ((after.largest_component - before.largest_component) / before.largest_component * 100).toFixed(1);
+        const effChange = before.efficiency > 0 ? ((after.efficiency - before.efficiency) / before.efficiency * 100).toFixed(1) : 'N/A';
+
+        elements.metrics.innerHTML = `
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Nodes</div>
+              <div class="metric-value">${after.nodes}</div>
+              <div class="metric-change negative">${nodeChange}%</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Edges</div>
+              <div class="metric-value">${after.edges}</div>
+              <div class="metric-change negative">${edgeChange}%</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Largest Component</div>
+              <div class="metric-value">${after.largest_component}</div>
+              <div class="metric-change negative">${lccChange}%</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Efficiency</div>
+              <div class="metric-value">${after.efficiency > 0 ? after.efficiency.toFixed(3) : 'N/A'}</div>
+              <div class="metric-change negative">${effChange}%</div>
+            </div>
+          </div>
+        `;
+
+        renderAirportList();
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error analyzing network. Check console for details.');
+      } finally {
+        elements.loading.classList.remove('active');
+        elements.metrics.style.display = 'block';
+      }
+    }, 300);
+
+    document.getElementById('simulate').addEventListener('click', simulate);
+
+    document.getElementById('reset').addEventListener('click', () => {
+      disruptedSet.clear();
+      strandedSet.clear();
+      elements.autoN.value = '0';
+      location.reload();
+    });
+
+    // Add NEW function to update sizes on zoom (add after updateMapLayers function):
+    function updateVisualSizes() {
+      const zoom = map.getZoom();
+      
+      // Calculate dynamic sizes
+      // At Zoom 2 (World view): tiny lines (0.3px) and dots (1px)
+      // At Zoom 10 (Close up): thick lines (2px) and dots (5px)
+      const baseWeight = Math.max(0.3, zoom / 5);
+      const baseRadius = Math.max(1, zoom / 2);
+
+      // 1. Update Routes (Lines)
+      activeRoutesLayer.eachLayer(layer => {
+        layer.eachLayer(subLayer => {
+          // Preserve community-based weight modifiers
+          const props = subLayer.feature.properties;
+          const groupId = props.group;
+          
+          let newWeight;
+          if (props.disrupted) {
+            newWeight = baseWeight * 1.5;
+          } else if (groupId === -1) {
+            newWeight = baseWeight * 0.6;
+          } else {
+            newWeight = baseWeight;
+          }
+          
+          subLayer.setStyle({ weight: newWeight });
+        });
+      });
+      
+      disruptedRoutesLayer.eachLayer(layer => {
+        layer.eachLayer(subLayer => {
+          subLayer.setStyle({ weight: baseWeight * 1.5 });
+        });
+      });
+
+      // 2. Update Airports (Dots)
+      activeAirportsLayer.eachLayer(marker => {
+        marker.setRadius(baseRadius);
+      });
+      
+      disruptedAirportsLayer.eachLayer(marker => {
+        marker.setRadius(baseRadius + 2); // Keep disrupted slightly bigger
+      });
+    }
+
+    // Add zoom event listener at the end of the script (before INITIALIZATION):
+    map.on('zoomend', updateVisualSizes);
+
+    // INITIALIZATION
+    loadCountryBorders();
+    updateMapLayers();
+    renderAirportList();
+    updateVisualSizes(); // Initial sizing
+  </script>
+</body>
+</html>
