@@ -8,11 +8,11 @@ import networkx as nx
 import pandas as pd
 from networkx.algorithms import community
 
-APP = Flask(__name__, static_folder="static", template_folder="templates")
+APP = Flask(__name__, static_folder="static", template_folder="Data")
 
 # ---------- CONFIG ----------
-AIRPORTS_CSV = "airports_cleaned.csv"
-ROUTES_CSV = "routes_cleaned.csv"
+AIRPORTS_CSV = "Data/airports_cleaned.csv"
+ROUTES_CSV = "Data/routes_cleaned.csv"
 MAX_ROUTES = None  # or an int to limit
 MAX_STOPS = 1
 
@@ -322,7 +322,7 @@ try:
     AIRPORTS = load_airports(AIRPORTS_CSV)
     ROUTES = load_routes(ROUTES_CSV, max_routes=MAX_ROUTES, max_stops=MAX_STOPS)
     GRAPH = build_graph(ROUTES, AIRPORTS)
-    print("✅ Data loaded successfully!")
+    print("Data loaded successfully!")
     print("=" * 50)
 except Exception as e:
     raise SystemExit(f"Error loading data: {e}")
@@ -390,6 +390,6 @@ def health():
     })
 
 if __name__ == "__main__":
-    print("\n🚀 Starting Flask server on http://localhost:5000")
+    print("\n Starting Flask server on http://localhost:5000")
     print("Press CTRL+C to quit\n")
-    APP.run(host="0.0.0.0", port=5000, debug=True)
+    APP.run(host="0.0.0.0", port=5000, debug=False)
