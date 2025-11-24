@@ -28,7 +28,6 @@ Both components rely on the cleaned datasets located in the `Data/` directory:
 │   ├── airports_cleaned.csv  
 │   ├── routes_cleaned.csv  
 │   ├── index.html  
-└── static/  
 
 ---
 
