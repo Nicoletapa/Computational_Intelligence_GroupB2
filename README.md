@@ -138,14 +138,6 @@ Contains:
 
 ---
 
-## Authors
-
-Group B2 — Computational Intelligence  
-OsloMet, Fall 2025  
-Course: ACIT4620 – Computational Intelligence  
-
----
-
 ## Notes for Grading
 
 - All code is self-contained.  
