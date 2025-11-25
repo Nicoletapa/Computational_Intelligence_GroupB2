@@ -13,8 +13,7 @@ APP = Flask(__name__, static_folder="static", template_folder="templates")
 # ---------- CONFIG ----------
 AIRPORTS_CSV = "airports_cleaned.csv"
 ROUTES_CSV = "routes_cleaned.csv"
-MAX_ROUTES = None  
-MAX_STOPS = 1
+MAX_ROUTES = None  # Set to a number to limit routes (e.g., 10000), or None for all
 
 # ---------- GEO HELPERS ----------
 def gc_intermediate_points(lon1, lat1, lon2, lat2, steps=0):
@@ -93,8 +92,8 @@ def load_airports(path):
     print(f"Loaded {loaded_count} airports (indexed by {len(airports)} codes)")
     return airports
 
-def load_routes(path, max_routes=None, max_stops=1):
-    """Load routes from CSV, filtering by stops."""
+def load_routes(path, max_routes=None):
+    """Load routes from CSV (all direct flights, no stops column)."""
     routes = []
     seen = set()
     
@@ -108,32 +107,25 @@ def load_routes(path, max_routes=None, max_stops=1):
                 src = (row.get("src_airport") or "").strip()
                 dst = (row.get("dst_airport") or "").strip()
                 
+                # Skip empty entries
                 if not src or not dst:
                     continue
                 
-                # Check stops filter
-                stops = row.get("stops")
-                try:
-                    stops_val = int(stops) if stops not in (None, "") else 0
-                except ValueError:
-                    stops_val = 0
-                
-                if stops_val > max_stops:
-                    continue
-                
-                # Deduplicate
+                # Deduplicate (just in case)
                 key = (src, dst)
                 if key in seen:
                     continue
                 seen.add(key)
                 routes.append(key)
                 
+                # Break if max_routes limit reached
                 if max_routes and len(routes) >= max_routes:
                     break
+                    
     except Exception as e:
         raise Exception(f"Error reading routes CSV: {e}")
     
-    print(f"Loaded {len(routes)} routes")
+    print(f"Loaded {len(routes)} direct routes")
     return routes
 
 # ---------- GRAPH BUILD ----------
@@ -337,7 +329,7 @@ if not Path(AIRPORTS_CSV).exists() or not Path(ROUTES_CSV).exists():
 try:
     print("Loading data...")
     AIRPORTS = load_airports(AIRPORTS_CSV)
-    ROUTES = load_routes(ROUTES_CSV, max_routes=MAX_ROUTES, max_stops=MAX_STOPS)
+    ROUTES = load_routes(ROUTES_CSV, max_routes=MAX_ROUTES)  # Removed max_stops parameter
     GRAPH = build_graph(ROUTES, AIRPORTS)
     print("✅ Data loaded successfully!")
     print("=" * 50)
